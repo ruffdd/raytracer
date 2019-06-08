@@ -1,10 +1,13 @@
-srcdir = src
+CPPFLAGS += -I EasyBMP $(G)
 CC = g++
 
+all: raytracer
 
-raytracer: main.o 
+raytracer: main.o EasyBMP.o
+	$(CC) $^ $(CPPFLAGS) -o $@
 
-%.o: src/%.cpp
+EasyBMP.o: EasyBMP/EasyBMP.cpp
+	$(CC) -c $^ $(CPPFLAGS) -o $@
 
 clear:
 	rm -f *.o
