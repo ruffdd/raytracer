@@ -11,11 +11,12 @@ RGBApixel RGBApixl(ebmpBYTE a, ebmpBYTE r, ebmpBYTE g, ebmpBYTE b);
 void setColor(BMP &bmp, RGBApixel color);
 void initOpenCL();
 
-BMP output;
-cl::Context context;
-cl::Device device;
-cl::CommandQueue queue;
-cl::Kernel mainkernel;
+static BMP output;
+static cl::Context context;
+static cl::Device device;
+static cl::CommandQueue queue;
+static cl::Kernel mainkernel;
+static cl::Program program;
 
 int main(int argc, char const *argv[]) {
   std::cout << "Raytracer" << std::endl;
@@ -24,16 +25,16 @@ int main(int argc, char const *argv[]) {
   setColor(output, RGBApixl(255, 0, 0, 0));
   initOpenCL();
 
-  cl::Image2D image(context, CL_MEM_WRITE_ONLY,
-                    cl::ImageFormat(CL_RGB, CL_UNSIGNED_INT8),
-                    output.TellWidth(), output.TellHeight());
-  //mainkernel.setArg(0, image);
+  //cl::Image2D image(context, CL_MEM_WRITE_ONLY,cl::ImageFormat(CL_RGB, CL_UNSIGNED_INT8),output.TellWidth(), output.TellHeight());
+  // mainkernel.setArg(0, image);
+  mainkernel = cl::Kernel(program, "mainkernel");
 
-  std::cout << queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(32, 32),
-                                          cl::NDRange(32, 32), NULL, NULL)
-            << std::endl;
+  std::cout << mainkernel.getInfo<CL_KERNEL_ATTRIBUTES>() << std::endl;
+  cl_int kernelerror = queue.enqueueNDRangeKernel(mainkernel, 0, 1, 1);
+  std::cout << kernelerror << std::endl;
+  
 
-  output.WriteToFile("raytracer-output.bmp");
+  // output.WriteToFile("raytracer-output.bmp");
   return 0;
 }
 
@@ -49,8 +50,11 @@ void initOpenCL() {
     plat.getDevices(CL_DEVICE_TYPE_GPU, &devices);
     devicenumber = 0;
     for (auto &device : devices) {
-      std::cout << "  Device " << devicenumber << ": "
-                << device.getInfo<CL_DEVICE_NAME>() << "\n";
+      std::cout << "\t\tDevice " << devicenumber << ": "
+                << device.getInfo<CL_DEVICE_NAME>() << "\n"
+                << "\t\t\tMax Workgroup size: "
+                << device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>()<<"\n"
+                << "\t\t\tMax Workitem size: " << device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
       std::cout << std::endl;
       devicenumber++;
     }
@@ -63,17 +67,19 @@ void initOpenCL() {
                            // (cl_context_properties) platforms[0] (), 0, 0 });
   device = context.getInfo<CL_CONTEXT_DEVICES>()[0];
   queue = (context, device, CL_QUEUE_PROFILING_ENABLE);
-  std::string kernelcode;
-  std::ifstream("mainkernel.cl") >> kernelcode;
-  std::cout << kernelcode;
-  cl::Program program = cl::Program(context, kernelcode);
+
+  std::ifstream file("mainkernel.cl");
+  std::string kernelcode = std::string(std::istreambuf_iterator<char>(file),
+                                       std::istreambuf_iterator<char>());
+  std::cout << "Kernel code:\n" << kernelcode << "\n" << std::endl;
+  program = cl::Program(context, kernelcode.c_str());
   if (program.build(devices, "") != 0) {
     std::cerr << "\e[1;31mKernel Build Error:\e[0m\n";
     std::string buildstatus =
         program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
     std::cout << buildstatus << std::endl;
   }
-  mainkernel = cl::Kernel(program, "kernel");
+  mainkernel = cl::Kernel(program, "mainkernel");
 }
 
 void setColor(BMP &bmp, RGBApixel color) {
