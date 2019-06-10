@@ -28,8 +28,7 @@ int main(int argc, char const *argv[]) {
   //cl::Image2D image(context, CL_MEM_WRITE_ONLY,cl::ImageFormat(CL_RGB, CL_UNSIGNED_INT8),output.TellWidth(), output.TellHeight());
   // mainkernel.setArg(0, image);
   mainkernel = cl::Kernel(program, "mainkernel");
-
-  std::cout << mainkernel.getInfo<CL_KERNEL_ATTRIBUTES>() << std::endl;
+  //std::cout << mainkernel <<"end info"<< std::endl;
   cl_int kernelerror = queue.enqueueNDRangeKernel(mainkernel, 0, 1, 1);
   std::cout << kernelerror << std::endl;
   
@@ -66,7 +65,7 @@ void initOpenCL() {
       CL_DEVICE_TYPE_GPU); // (CL_DEVICE_TYPE_GPU, { CL_CONTEXT_PLATFORM,
                            // (cl_context_properties) platforms[0] (), 0, 0 });
   device = context.getInfo<CL_CONTEXT_DEVICES>()[0];
-  queue = (context, device, CL_QUEUE_PROFILING_ENABLE);
+  queue =cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
 
   std::ifstream file("mainkernel.cl");
   std::string kernelcode = std::string(std::istreambuf_iterator<char>(file),
