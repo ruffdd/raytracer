@@ -10,6 +10,8 @@ raytracer: main.o EasyBMP.o
 EasyBMP.o: EasyBMP/EasyBMP.cpp
 	$(CC) -c $^ $(CPPFLAGS) -o $@
 
+main.o: main.cpp clerrorhelper.hpp
+
 clear:
 	rm -f *.o
 
