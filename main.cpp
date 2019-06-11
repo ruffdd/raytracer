@@ -7,7 +7,7 @@
 #include <EasyBMP.h>
 #include <fstream>
 #include <iostream>
-#include "clerrorhelper.hpp"
+#include "helper.hpp"
 
 RGBApixel RGBApixl(ebmpBYTE a, ebmpBYTE r, ebmpBYTE g, ebmpBYTE b);
 void setColor(BMP &bmp, RGBApixel color);
@@ -28,7 +28,8 @@ int main(int argc, char const *argv[])
     setColor(output, RGBApixl(255, 0, 0, 0));
     initOpenCL();
 
-    cl::Image2D kernel_out = cl::Image2D(context,CL_MEM_WRITE_ONLY,cl::ImageFormat(CL_RGB,CL_UNSIGNED_INT8),output.TellWidth(),output.TellHeight());
+    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGB, CL_UNSIGNED_INT8), output.TellWidth(), output.TellHeight());
+    std::cout << kernel_out.getInfo<CL_MEM_SIZE>() << std::endl;
     cl::size_t<3> origin;
     origin[0] = 0;
     origin[1] = 0;
@@ -40,11 +41,13 @@ int main(int argc, char const *argv[])
     //queue.enqueueReadImage(image, true, origin, region, output.TellWidth() * output.TellBitDepth() / 8, 0, &image);
     mainkernel = cl::Kernel(program, "mainkernel");
     mainkernel.setArg(0, kernel_out);
-    cl_int kernelerror = queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(32, 32), cl::NDRange(32, 32));
+    cl_int kernelerror = queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(1, 1), cl::NDRange(1, 1));
     if (kernelerror != 0)
     {
         std::cerr << "\e[1;31mKernel Run Error:\e[0m " << kernelerror << " " << error_to_string(kernelerror) << std::endl;
-    }else{
+    }
+    else
+    {
         std::cout << "\e[1;32mKernel run Succsesfully\e[0m" << std::endl;
     }
 
@@ -67,12 +70,10 @@ void initOpenCL()
         devicenumber = 0;
         for (auto &device : devices)
         {
-            std::cout << "\t\tDevice " << devicenumber << ": "
-                      << device.getInfo<CL_DEVICE_NAME>() << "\n"
-                      << "\t\t\tMax Workgroup size: "
-                      << device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << "\n"
-                      << "\t\t\tMax Workitem size: "
-                      << device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
+            std::cout << "\tDevice " << devicenumber << ": " << device.getInfo<CL_DEVICE_NAME>() << "\n"
+                      << "\t\tMax Workgroup size: " << device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << "\n"
+                      << "\t\tMax Workitem size: " << device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0]<<"\n"
+                      << "\t\tMemory size: " << bytestohuman(device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>());
             std::cout << std::endl;
             devicenumber++;
         }
@@ -89,7 +90,7 @@ void initOpenCL()
     std::ifstream file("mainkernel.cl");
     std::string kernelcode = std::string(std::istreambuf_iterator<char>(file),
                                          std::istreambuf_iterator<char>());
-    program = cl::Program(context, kernelcode.c_str(),CL_TRUE);
+    program = cl::Program(context, kernelcode.c_str(), CL_TRUE);
     cl_int builderr = program.build(devices, "");
     if (builderr != 0)
     {
