@@ -99,3 +99,21 @@ const std::string bytestohuman(long bytes)
     remain /= 100;
     return std::to_string(remain) +" "+ end;
 }
+
+void runPrintError(cl_int errcode,std::string errorPrefix,std::string errorSuffix="", std::string succesMessage = ""){
+    if(errcode != CL_SUCCESS){
+        std::cerr << "\e[1;31m" << errorPrefix << ":\e[0m " << errcode << " " << error_to_string(errcode);
+        if(errorSuffix != ""){
+            std::cerr << errorSuffix;
+        }
+        std::cerr << std::endl;
+    }else if (succesMessage != "")
+    {
+        std::cout << "\e[1;32m"<<succesMessage<<"\e[0m" << std::endl;
+    }
+    
+}
+
+void errorCallback(const char* errinfo,const void* privat_info,size_t cb,void * userdata){
+    std:: cerr << "\e[1;31m" << errinfo << "\e[0m" << "\n" << privat_info << std::endl;
+}

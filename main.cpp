@@ -28,8 +28,8 @@ int main(int argc, char const *argv[])
     setColor(output, RGBApixl(255, 0, 0, 0));
     initOpenCL();
 
-    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGB, CL_UNSIGNED_INT8), output.TellWidth(), output.TellHeight());
-    std::cout << kernel_out.getInfo<CL_MEM_SIZE>() << std::endl;
+    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGB, CL_UNSIGNED_INT8), 1, 1);
+    std::cout << "picture Size: " << kernel_out.getInfo<CL_MEM_SIZE>() << std::endl;
     cl::size_t<3> origin;
     origin[0] = 0;
     origin[1] = 0;
@@ -40,16 +40,8 @@ int main(int argc, char const *argv[])
     region[2] = 1;
     //queue.enqueueReadImage(image, true, origin, region, output.TellWidth() * output.TellBitDepth() / 8, 0, &image);
     mainkernel = cl::Kernel(program, "mainkernel");
-    mainkernel.setArg(0, kernel_out);
-    cl_int kernelerror = queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(1, 1), cl::NDRange(1, 1));
-    if (kernelerror != 0)
-    {
-        std::cerr << "\e[1;31mKernel Run Error:\e[0m " << kernelerror << " " << error_to_string(kernelerror) << std::endl;
-    }
-    else
-    {
-        std::cout << "\e[1;32mKernel run Succsesfully\e[0m" << std::endl;
-    }
+    runPrintError(mainkernel.setArg(0, kernel_out), "Set Arg Error");
+    queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(1, 1), cl::NDRange(1, 1));
 
     // output.WriteToFile("raytracer-output.bmp");
     return 0;
@@ -72,7 +64,7 @@ void initOpenCL()
         {
             std::cout << "\tDevice " << devicenumber << ": " << device.getInfo<CL_DEVICE_NAME>() << "\n"
                       << "\t\tMax Workgroup size: " << device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << "\n"
-                      << "\t\tMax Workitem size: " << device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0]<<"\n"
+                      << "\t\tMax Workitem size: " << device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0] << "\n"
                       << "\t\tMemory size: " << bytestohuman(device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>());
             std::cout << std::endl;
             devicenumber++;
@@ -81,25 +73,16 @@ void initOpenCL()
         devices.clear();
     }
     platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
-    context = cl::Context(
-        CL_DEVICE_TYPE_GPU); // (CL_DEVICE_TYPE_GPU, { CL_CONTEXT_PLATFORM,
-                             // (cl_context_properties) platforms[0] (), 0, 0 });
+    context = cl::Context(CL_DEVICE_TYPE_GPU,NULL,errorCallback);
     device = context.getInfo<CL_CONTEXT_DEVICES>()[0];
-    queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
-
+    cl_int queueError;
+    queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE,&queueError);
+    runPrintError(queueError,"Create Commandqueue error");
     std::ifstream file("mainkernel.cl");
     std::string kernelcode = std::string(std::istreambuf_iterator<char>(file),
                                          std::istreambuf_iterator<char>());
     program = cl::Program(context, kernelcode.c_str(), CL_TRUE);
-    cl_int builderr = program.build(devices, "");
-    if (builderr != 0)
-    {
-        std::cerr << "\e[1;31mKernel Build Error:\e[0m\n";
-        std::cerr << builderr << " " << error_to_string(builderr);
-        std::string buildstatus =
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
-        std::cout << buildstatus << std::endl;
-    }
+    runPrintError(program.build(devices, ""), "Kernel build Error", "\n" + program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
     mainkernel = cl::Kernel(program, "mainkernel");
 }
 
