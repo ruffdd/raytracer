@@ -27,8 +27,10 @@ int main(int argc, char const *argv[])
     output.SetBitDepth(32);
     setColor(output, RGBApixl(255, 0, 0, 0));
     initOpenCL();
-
-    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGB, CL_UNSIGNED_INT8), 1, 1);
+    char* imageHostPtr;
+    cl_int imageError;
+    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT8), 32, 32,0,NULL,&imageError);
+    runPrintError(imageError,"Image build error");
     std::cout << "picture Size: " << kernel_out.getInfo<CL_MEM_SIZE>() << std::endl;
     cl::size_t<3> origin;
     origin[0] = 0;
