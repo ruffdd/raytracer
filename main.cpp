@@ -7,9 +7,9 @@
 #include <EasyBMP.h>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include "helper.hpp"
 
-RGBApixel RGBApixl(ebmpBYTE a, ebmpBYTE r, ebmpBYTE g, ebmpBYTE b);
 void setColor(BMP &bmp, RGBApixel color);
 void initOpenCL();
 
@@ -20,16 +20,18 @@ static cl::CommandQueue queue;
 static cl::Kernel mainkernel;
 static cl::Program program;
 
+static char* outPath="raytracer-out.bmp";
+
 int main(int argc, char const *argv[])
 {
     std::cout << "Raytracer" << std::endl;
-    output.SetSize(32, 32);
+    output.SetSize(1, 1);
     output.SetBitDepth(32);
-    setColor(output, RGBApixl(255, 0, 0, 0));
+    setColor(output, rgbapixel(255, 0, 0, 0));
     initOpenCL();
     char* imageHostPtr;
     cl_int imageError;
-    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT8), 32, 32,0,NULL,&imageError);
+    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT8), 1, 1,0,NULL,&imageError);
     runPrintError(imageError,"Image build error");
     std::cout << "picture Size: " << kernel_out.getInfo<CL_MEM_SIZE>() << std::endl;
     cl::size_t<3> origin;
@@ -43,9 +45,16 @@ int main(int argc, char const *argv[])
     //queue.enqueueReadImage(image, true, origin, region, output.TellWidth() * output.TellBitDepth() / 8, 0, &image);
     mainkernel = cl::Kernel(program, "mainkernel");
     runPrintError(mainkernel.setArg(0, kernel_out), "Set Arg Error");
-    queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(1, 1), cl::NDRange(1, 1));
-
-    // output.WriteToFile("raytracer-output.bmp");
+    queue.enqueueNDRangeKernel(mainkernel, 0,cl::NDRange(1, 1), cl::NDRange(1,1));
+    uint32_t* imageData=(uint32_t*)malloc(output.TellWidth()*output.TellHeight()*output.TellBitDepth());
+    runPrintError(queue.enqueueReadImage(kernel_out,CL_TRUE,origin,region,0,0,imageData,NULL,NULL),"Read Image error");
+    
+    for(int x = 0; x < output.TellWidth();x++)
+        for(int y = 0; y < output.TellHeight();y++){
+            output.SetPixel(x,y,rgbapixel(imageData[x+y*output.TellWidth()]));
+        }
+    output.WriteToFile(outPath);
+    //system(("xdg-open "+std::string(outPath)+"&").c_str());
     return 0;
 }
 
@@ -95,14 +104,4 @@ void setColor(BMP &bmp, RGBApixel color)
         {
             bmp.SetPixel(x, y, color);
         }
-}
-
-RGBApixel RGBApixl(ebmpBYTE a, ebmpBYTE r, ebmpBYTE g, ebmpBYTE b)
-{
-    RGBApixel pixel;
-    pixel.Alpha = a;
-    pixel.Red = r;
-    pixel.Green = g;
-    pixel.Blue = g;
-    return pixel;
 }

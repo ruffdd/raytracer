@@ -117,3 +117,20 @@ void runPrintError(cl_int errcode,std::string errorPrefix,std::string errorSuffi
 void errorCallback(const char* errinfo,const void* privat_info,size_t cb,void * userdata){
     std:: cerr << "\e[1;31m" << errinfo << "\e[0m" << "\n" << privat_info << std::endl;
 }
+
+
+RGBApixel rgbapixel(ebmpBYTE r, ebmpBYTE g, ebmpBYTE b,ebmpBYTE a)
+{
+    RGBApixel pixel;
+    pixel.Alpha = a;
+    pixel.Red = r;
+    pixel.Green = g;
+    pixel.Blue = g;
+    return pixel;
+}
+
+RGBApixel rgbapixel(const uint32_t pixel){
+    uint8_t* bytes=(uint8_t*)(&pixel);
+    return rgbapixel(bytes[0],bytes[1],bytes[2],bytes[3]);
+
+}
