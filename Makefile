@@ -1,4 +1,4 @@
-CPPFLAGS += -I EasyBMP $(G) -std=c++17
+CPPFLAGS += -I EasyBMP $(G) $(DEFINED) -std=c++17
 LFLAGS += -lOpenCL
 CC = g++
 

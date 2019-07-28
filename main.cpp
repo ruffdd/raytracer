@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include "helper.hpp"
+#include "iomanip"
 
 void setColor(BMP &bmp, RGBApixel color);
 void initOpenCL();
@@ -20,19 +21,19 @@ static cl::CommandQueue queue;
 static cl::Kernel mainkernel;
 static cl::Program program;
 
-static char* outPath="raytracer-out.bmp";
+static char *outPath = "raytracer-out.bmp";
 
 int main(int argc, char const *argv[])
 {
     std::cout << "Raytracer" << std::endl;
-    output.SetSize(1, 1);
+    output.SetSize(32, 32);
     output.SetBitDepth(32);
-    setColor(output, rgbapixel(255, 0, 0, 0));
+    setColor(output, rgbapixel(255, 255, 0, 0));
     initOpenCL();
-    char* imageHostPtr;
+    char *imageHostPtr;
     cl_int imageError;
-    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT8), 1, 1,0,NULL,&imageError);
-    runPrintError(imageError,"Image build error");
+    cl::Image2D kernel_out = cl::Image2D(context, CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT8), output.TellWidth(), output.TellHeight(), 0, NULL, &imageError);
+    runPrintError(imageError, "Image build error");
     std::cout << "picture Size: " << kernel_out.getInfo<CL_MEM_SIZE>() << std::endl;
     cl::size_t<3> origin;
     origin[0] = 0;
@@ -45,14 +46,27 @@ int main(int argc, char const *argv[])
     //queue.enqueueReadImage(image, true, origin, region, output.TellWidth() * output.TellBitDepth() / 8, 0, &image);
     mainkernel = cl::Kernel(program, "mainkernel");
     runPrintError(mainkernel.setArg(0, kernel_out), "Set Arg Error");
-    queue.enqueueNDRangeKernel(mainkernel, 0,cl::NDRange(1, 1), cl::NDRange(1,1));
-    uint32_t* imageData=(uint32_t*)malloc(output.TellWidth()*output.TellHeight()*output.TellBitDepth());
-    runPrintError(queue.enqueueReadImage(kernel_out,CL_TRUE,origin,region,0,0,imageData,NULL,NULL),"Read Image error");
-    
-    for(int x = 0; x < output.TellWidth();x++)
-        for(int y = 0; y < output.TellHeight();y++){
-            output.SetPixel(x,y,rgbapixel(imageData[x+y*output.TellWidth()]));
+    queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(32, 32), cl::NDRange(1, 1));
+    uint32_t *imageData = (uint32_t *)malloc(output.TellWidth() * output.TellHeight() * output.TellBitDepth());
+    runPrintError(queue.enqueueReadImage(kernel_out, CL_TRUE, origin, region, 0, 0, imageData, NULL, NULL), "Read Image error");
+
+    for (int x = 0; x < output.TellWidth(); x++)
+        for (int y = 0; y < output.TellHeight(); y++)
+        {
+            uint32_t pixel = imageData[x + y * output.TellWidth()];
+            output.SetPixel(x, y, rgbapixel(pixel));
         }
+
+#ifdef LOG
+    std::cout << "image memdump:\n";
+    for (int i = 0; i < output.TellWidth() * output.TellHeight() * output.TellBitDepth(); i++)
+    {
+        uint8_t data = ((uint8_t *)imageData)[i];
+        std::cout << std::hex << (int)data;
+    }
+    std::cout << std::endl;
+#endif
+
     output.WriteToFile(outPath);
     //system(("xdg-open "+std::string(outPath)+"&").c_str());
     return 0;
@@ -84,11 +98,11 @@ void initOpenCL()
         devices.clear();
     }
     platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
-    context = cl::Context(CL_DEVICE_TYPE_GPU,NULL,errorCallback);
+    context = cl::Context(CL_DEVICE_TYPE_GPU, NULL, errorCallback);
     device = context.getInfo<CL_CONTEXT_DEVICES>()[0];
     cl_int queueError;
-    queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE,&queueError);
-    runPrintError(queueError,"Create Commandqueue error");
+    queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &queueError);
+    runPrintError(queueError, "Create Commandqueue error");
     std::ifstream file("mainkernel.cl");
     std::string kernelcode = std::string(std::istreambuf_iterator<char>(file),
                                          std::istreambuf_iterator<char>());
