@@ -125,12 +125,18 @@ RGBApixel rgbapixel(ebmpBYTE r, ebmpBYTE g, ebmpBYTE b,ebmpBYTE a)
     pixel.Alpha = a;
     pixel.Red = r;
     pixel.Green = g;
-    pixel.Blue = g;
+    pixel.Blue = b;
     return pixel;
 }
 
 RGBApixel rgbapixel(const uint32_t pixel){
     uint8_t* bytes=(uint8_t*)(&pixel);
     return rgbapixel(bytes[0],bytes[1],bytes[2],bytes[3]);
+
+}
+
+RGBApixel abgrpixel(const uint32_t pixel){
+    uint8_t* bytes=(uint8_t*)(&pixel);
+    return rgbapixel(bytes[3],bytes[2],bytes[1],bytes[0]);
 
 }

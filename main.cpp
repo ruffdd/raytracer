@@ -26,7 +26,7 @@ static char *outPath = "raytracer-out.bmp";
 int main(int argc, char const *argv[])
 {
     std::cout << "Raytracer" << std::endl;
-    output.SetSize(32, 32);
+    output.SetSize(1920, 1080);
     output.SetBitDepth(32);
     setColor(output, rgbapixel(255, 255, 0, 0));
     initOpenCL();
@@ -43,26 +43,26 @@ int main(int argc, char const *argv[])
     region[0] = output.TellWidth();
     region[1] = output.TellHeight();
     region[2] = 1;
-    //queue.enqueueReadImage(image, true, origin, region, output.TellWidth() * output.TellBitDepth() / 8, 0, &image);
     mainkernel = cl::Kernel(program, "mainkernel");
     runPrintError(mainkernel.setArg(0, kernel_out), "Set Arg Error");
-    queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(32, 32), cl::NDRange(1, 1));
-    uint32_t *imageData = (uint32_t *)malloc(output.TellWidth() * output.TellHeight() * output.TellBitDepth());
+    queue.enqueueNDRangeKernel(mainkernel, 0, cl::NDRange(output.TellWidth(), output.TellHeight()), cl::NDRange(1, 1));
+    uint32_t *imageData = (uint32_t *)malloc(output.TellWidth() * output.TellHeight() * output.TellBitDepth()/4);
     runPrintError(queue.enqueueReadImage(kernel_out, CL_TRUE, origin, region, 0, 0, imageData, NULL, NULL), "Read Image error");
 
     for (int x = 0; x < output.TellWidth(); x++)
         for (int y = 0; y < output.TellHeight(); y++)
         {
-            uint32_t pixel = imageData[x + y * output.TellWidth()];
-            output.SetPixel(x, y, rgbapixel(pixel));
+            uint8_t* pixel = (uint8_t*)(((uint32_t*) imageData)+x + y * output.TellWidth());
+            
+            output.SetPixel(x,y,rgbapixel(pixel[0], pixel[1], pixel[2],pixel[3]));
         }
 
 #ifdef LOG
     std::cout << "image memdump:\n";
-    for (int i = 0; i < output.TellWidth() * output.TellHeight() * output.TellBitDepth(); i++)
+    for (int i = 0; i < 32; i++)
     {
-        uint8_t data = ((uint8_t *)imageData)[i];
-        std::cout << std::hex << (int)data;
+        uint32_t data = ((uint32_t *)imageData)[i];
+        std::cout << std::hex << (int)data<<" ";
     }
     std::cout << std::endl;
 #endif
