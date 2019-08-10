@@ -7,7 +7,7 @@ all: bin obj bin/raytracer bin/mainkernel.cl
 bin/raytracer: obj/main.o obj/EasyBMP.o
 	$(CXX) $^ $(CPPFLAGS) $(LFLAGS) -o $@
 
-bin/mainkernel.cl:
+bin/mainkernel.cl: src/mainkernel.cl
 	gcc -fsyntax-only src/mainkernel.cl
 	cp src/mainkernel.cl bin/
 

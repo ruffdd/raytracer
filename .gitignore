@@ -2,3 +2,5 @@
 *.o
 /raytracer
 *.bmp
+bin/
+obj/
