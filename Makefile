@@ -1,19 +1,30 @@
-CPPFLAGS += -I EasyBMP $(G) $(DEFINED) -std=c++17
+CPPFLAGS += -I EasyBMP $(G) $(DEFINED) -std=c++17 -I/usr/include -I./include -I./EasyBMP
 LFLAGS += -lOpenCL
-CC = g++
+VPATH= src EasyBMP
 
-all: raytracer
+all: bin obj bin/raytracer bin/mainkernel.cl
 
-raytracer: main.o EasyBMP.o
-	$(CC) $^ $(CPPFLAGS) $(LFLAGS) -o $@
+bin/raytracer: obj/main.o obj/EasyBMP.o
+	$(CXX) $^ $(CPPFLAGS) $(LFLAGS) -o $@
 
-EasyBMP.o: EasyBMP/EasyBMP.cpp
-	$(CC) -c $^ $(CPPFLAGS) -o $@
+bin/mainkernel.cl:
+	gcc -fsyntax-only src/mainkernel.cl
+	cp src/mainkernel.cl bin/
 
-main.o: main.cpp helper.hpp
+obj/EasyBMP.o: EasyBMP.cpp
+	$(CXX) -c $^ $(CPPFLAGS) -o $@
+
+obj/main.o: main.cpp
+	$(CXX) -c $^ $(CPPFLAGS) -o $@
+
+bin:
+	mkdir bin
+
+obj: 
+	mkdir obj
 
 clear:
-	rm -f *.o
+	rm -rf obj/
 
 clean: clear
-	rm -f raytracer
+	rm -rf bin

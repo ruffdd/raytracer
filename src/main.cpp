@@ -21,11 +21,13 @@ static cl::CommandQueue queue;
 static cl::Kernel mainkernel;
 static cl::Program program;
 
-static char *outPath = "raytracer-out.bmp";
+static std::string outPath="";
 
 int main(int argc, char const *argv[])
 {
     std::cout << "Raytracer" << std::endl;
+    outPath=std::string(argv[0]).substr(0,std::string(argv[0]).find_last_of(pathSeperator))+"/raytracer-out.bmp";
+
     output.SetSize(1920, 1080);
     output.SetBitDepth(32);
     setColor(output, rgbapixel(255, 255, 0, 0));
@@ -67,7 +69,7 @@ int main(int argc, char const *argv[])
     std::cout << std::endl;
 #endif
 
-    output.WriteToFile(outPath);
+    output.WriteToFile(outPath.c_str());
     //system(("xdg-open "+std::string(outPath)+"&").c_str());
     return 0;
 }

@@ -2,6 +2,12 @@
 #include <map>
 #include <string>
 
+#ifndef win32
+    #define pathSeperator '/'
+#elif
+    #define pathSeperator '\'
+#endif
+
 const char *error_to_string(int error)
 {
     std::map<cl_int, const char *> map{
