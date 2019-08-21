@@ -15,13 +15,21 @@ __constant float3 testTriangle[] = {(0, 0, 2), (10, 0, 5), (0, 10, 5)};
 
 float surface(float3 a, float3 b, float3 c)
 {
-    return (length(a) + length(b) + length(c)) / 2;
+    float s=(length(a) + length(b) + length(c)) / 2;
+    float ab = length(b-a);
+    float bc = length(c-b);
+    float ca = length(a-c);
+    return sqrt(s*(s-ab)*(s-bc)*(s-ca));
 }
 
 float3 baryzentricCoordinates(float3 a, float3 b, float3 c, float3 q)
 {
+    float surfaceAll = surface(a,b,c);
+    float l1 = surface(q,b,c)/surfaceAll;
+    float l2 = surface(a,q,c)/surfaceAll;
+    float l3 = surface(a,b,q) /surfaceAll;
 
-    return (0.3f, 0.3f, 0.3f);
+    return (l1,l2,l3);
 }
 
 bool rayIntersects(float3 rayOrig, float3 rayDirect, __private float3 *triangle)
@@ -44,7 +52,7 @@ __kernel void mainkernel(__write_only image2d_t image)
     float3 targetOnImage = (float3)(get_global_id(0), get_global_id(1), 0) - ((float3)(get_global_size(0), get_global_size(1), 0)) / 2;
     float3 lightbeam = normalize(targetOnImage - cameraPosition);
     uint4 color = backgroundColor;
-    color = (uint4)(lightbeam.x * 255 + 128, lightbeam.y * 255 + 128, lightbeam.z * 255 + 128, 255);
+    //color = (uint4)(lightbeam.x * 255 + 128, lightbeam.y * 255 + 128, lightbeam.z * 255 + 128, 255);
 
     // printf("%f %f %f\n", bary.x, bary.y, bary.z);
     // if (rayIntersects(cameraPosition, lightbeam, testTriangle))
@@ -62,11 +70,13 @@ __kernel void mainkernel(__write_only image2d_t image)
     float3 directionPlane = (float3)(dot(lightbeam, plaineA), dot(lightbeam, plaineB), dot(lightbeam, plaineNormal));
     float plaineT = copysign((rayOriginPlaine / directionPlane).x, 1);
     float3 plaineInter = cameraPosition + plaineT * lightbeam;
-    printv(plaineInter);
-    color = (uint4)(plaineInter.x * 255 + 128, plaineInter.y * 255 + 128, plaineInter.z * 255 + 128, 255);
-    if (dot((testTriangle[0] - testTriangle[1]), lightbeam) == 0)
-    {
-        color = (uint4)(255, 255, 255, 255);
+    
+    float3 baryzentricCoords = baryzentricCoordinates(testTriangle[0],testTriangle[1],testTriangle[2],plaineInter);
+    printv(baryzentricCoords);
+    if(baryzentricCoords.x >= 0 && baryzentricCoords.y >= 0, baryzentricCoords.z >= 0){
+        color=(uint4)(255,0,0,255);
+    }else{
+        color=backgroundColor;
     }
     write_imageui(image, imageCoords, color);
 }
