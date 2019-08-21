@@ -26,7 +26,7 @@ static std::string outPath="";
 int main(int argc, char const *argv[])
 {
     std::cout << "Raytracer" << std::endl;
-    outPath=std::string(argv[0]).substr(0,std::string(argv[0]).find_last_of(pathSeperator))+"/raytracer-out.bmp";
+    outPath=std::string(argv[0]).substr(0,std::string(argv[0]).find_last_of(pathSeperator));
 
     output.SetSize(1920, 1080);
     output.SetBitDepth(32);
@@ -69,7 +69,7 @@ int main(int argc, char const *argv[])
     std::cout << std::endl;
 #endif
 
-    output.WriteToFile(outPath.c_str());
+    output.WriteToFile((outPath+"/raytracer-out.bmp").c_str());
     //system(("xdg-open "+std::string(outPath)+"&").c_str());
     return 0;
 }
@@ -105,7 +105,7 @@ void initOpenCL()
     cl_int queueError;
     queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &queueError);
     runPrintError(queueError, "Create Commandqueue error");
-    std::ifstream file("mainkernel.cl");
+    std::ifstream file(outPath+"/mainkernel.cl");
     std::string kernelcode = std::string(std::istreambuf_iterator<char>(file),
                                          std::istreambuf_iterator<char>());
     program = cl::Program(context, kernelcode.c_str(), CL_TRUE);
